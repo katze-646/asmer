@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: asmer-demo
+  datasource:
+    url: jdbc:sqlite:file::memory:?cache=shared
+    driver-class-name: org.sqlite.JDBC
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+
+# Asmer configuration
+asmer:
+  concurrency:
+    strategy: auto          # auto / caller_thread / platform_threads / virtual_threads
+    pool-size: 4
+  cache:
+    type: caffeine           # none / caffeine
+    ttl: 5m
+    maximum-size: 10000
+  error-policy: throw        # throw / log_and_skip / fallback_empty
+
+server:
+  port: 8081
