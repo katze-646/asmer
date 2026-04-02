@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: jdbc:sqlite:file::memory:?cache=shared
+    driver-class-name: org.sqlite.JDBC
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+
+asmer:
+  concurrency:
+    strategy: caller_thread
+  cache:
+    type: caffeine
+    ttl: 5m
+    maximum-size: 1000
