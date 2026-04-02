@@ -217,7 +217,7 @@ Sprint 4 [待开始]   — 异步 API
 | ID | 分支 | 任务 | 状态 |
 |----|------|------|------|
 | S1-1 | `test/core/fetchers` | `Fetchers.parallel` / `sequential` / `fromMap` 全路径 | DONE (394005f) |
-| S1-2 | `test/core/chained-cache` | `ChainedCache` L1命中、L2命中、L2促进、写穿透、evict | TODO |
+| S1-2 | `test/core/chained-cache` | `ChainedCache` L1命中、L2命中、L2促进、写穿透、evict | DONE (70febac) |
 | S1-3 | `test/core/concurrency-advanced` | `Concurrency.withTimeout` 超时抛异常；`perCall` 每次新建池 | TODO |
 | S1-4 | `test/core/global-default` | `setGlobalDefault` 影响 `of()` 无参；Spring 启动后自动设置 | TODO |
 
