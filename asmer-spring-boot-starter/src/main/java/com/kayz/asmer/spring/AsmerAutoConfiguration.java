@@ -20,11 +20,15 @@ public class AsmerAutoConfiguration {
     @ConditionalOnMissingBean
     public AsmerConfig asmerConfig(AsmerProperties props,
                                    AsmerCache asmerCache) {
-        return AsmerConfig.builder()
+        AsmerConfig config = AsmerConfig.builder()
                 .concurrency(resolveConcurrency(props.getConcurrency()))
                 .cache(asmerCache)
                 .errorPolicy(resolveErrorPolicy(props.getErrorPolicy()))
                 .build();
+        // Make this config the process-wide default so that Asmer.of(data) (no-arg)
+        // automatically picks up YAML settings without explicit injection.
+        AsmerConfig.setGlobalDefault(config);
+        return config;
     }
 
     // ---- cache beans (Caffeine > no-op; Redis: auto-configured by asmer-cache-redis) ---

@@ -8,7 +8,6 @@ import com.example.demo.repository.OrderRepository;
 import com.example.demo.repository.UserRepository;
 import com.kayz.asmer.Asmer;
 import com.kayz.asmer.AsmerCache;
-import com.kayz.asmer.AsmerConfig;
 import com.kayz.asmer.Concurrency;
 import com.kayz.asmer.ErrorPolicy;
 import com.kayz.asmer.Fetchers;
@@ -24,11 +23,11 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Demonstrates Asmer usage patterns.
  *
- * GET /orders              — shared config via auto-configuration
+ * GET /orders              — bare Asmer.of(data), uses YAML defaults automatically
  * GET /orders/{id}         — single entity
  * GET /orders/status/{s}   — AsmerJpa.byId() helper
- * GET /orders/inline       — fully inline fluent config (no AsmerConfig needed)
- * GET /orders/override     — shared config as base, override cache per-call
+ * GET /orders/inline       — fully inline fluent config (no injection needed)
+ * GET /orders/override     — YAML defaults as base, override one setting per-call
  * GET /orders/timeout      — concurrency with timeout
  * GET /orders/onEach       — N+1 fallback
  * GET /orders/parallel     — Fetchers.parallel() for concurrent single-key fetch
@@ -42,7 +41,6 @@ public class OrderController {
     private final OrderRepository orderRepo;
     private final OrderItemRepository itemRepo;
     private final UserRepository userRepo;
-    private final AsmerConfig sharedConfig;  // auto-configured (Caffeine + caller-thread from yaml)
 
     private final AsmerCache l1Cache = mapCache("L1");
     private final AsmerCache l2Cache = mapCache("L2");
@@ -50,24 +48,25 @@ public class OrderController {
 
     public OrderController(OrderRepository orderRepo,
                            OrderItemRepository itemRepo,
-                           UserRepository userRepo,
-                           AsmerConfig sharedConfig) {
-        this.orderRepo    = orderRepo;
-        this.itemRepo     = itemRepo;
-        this.userRepo     = userRepo;
-        this.sharedConfig = sharedConfig;
+                           UserRepository userRepo) {
+        this.orderRepo = orderRepo;
+        this.itemRepo  = itemRepo;
+        this.userRepo  = userRepo;
     }
 
-    // ---- 1. Shared config (from application.yaml + auto-configuration) ---
+    // ---- 1. Bare Asmer.of — uses YAML defaults automatically ---------------
 
     /**
-     * Uses the auto-configured AsmerConfig (Caffeine cache + caller-thread by default).
+     * No AsmerConfig injection needed.
+     * AsmerAutoConfiguration sets the global default at startup, so
+     * Asmer.of(data) picks up application.yaml settings (cache, concurrency, errorPolicy).
+     *
      * SQL: 1 orders + 1 users IN (...) + 1 order_items IN (...) = 3 total.
      */
     @GetMapping
     public List<Order> listAll() {
         List<Order> orders = orderRepo.findAll();
-        Asmer.of(orders, sharedConfig)
+        Asmer.of(orders)
                 .on(Order::getUser,  userRepo::findByIdIn,      User::getId)
                 .on(Order::getItems, itemRepo::findByOrderIdIn, OrderItem::getOrderId)
                 .assemble();
@@ -118,17 +117,17 @@ public class OrderController {
         return orders;
     }
 
-    // ---- 5. Shared config as base, override a single setting per-call ---
+    // ---- 5. YAML defaults as base, override a single setting per-call ----
 
     /**
-     * sharedConfig provides concurrency + errorPolicy defaults.
-     * This call overrides just the cache (e.g. use a local L1-only cache for this endpoint).
+     * Starts from the YAML global default (concurrency + errorPolicy from yaml),
+     * then overrides just the cache for this specific endpoint.
      */
     @GetMapping("/override")
     public List<Order> withCacheOverride() {
         List<Order> orders = orderRepo.findAll();
-        Asmer.of(orders, sharedConfig)
-                .cache(l1Cache)   // override only the cache; concurrency + errorPolicy from sharedConfig
+        Asmer.of(orders)
+                .cache(l1Cache)   // override only the cache; concurrency + errorPolicy from yaml
                 .on(Order::getUser,  userRepo::findByIdIn,      User::getId)
                 .on(Order::getItems, itemRepo::findByOrderIdIn, OrderItem::getOrderId)
                 .assemble();
