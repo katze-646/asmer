@@ -1,13 +1,15 @@
-package com.kayz.asmer;
+package com.kayz.asmer.internal;
+
+import com.kayz.asmer.AsmerCache;
 
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 
-/** Package-private singleton returned by {@link AsmerCache#none()}. */
-final class NoOpAsmerCache implements AsmerCache {
+/** Singleton returned by {@link AsmerCache#none()}. Always a miss; writes are discarded. */
+public final class NoOpAsmerCache implements AsmerCache {
 
-    static final NoOpAsmerCache INSTANCE = new NoOpAsmerCache();
+    public static final NoOpAsmerCache INSTANCE = new NoOpAsmerCache();
 
     private NoOpAsmerCache() {}
 

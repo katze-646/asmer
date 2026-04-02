@@ -1,5 +1,7 @@
 package com.kayz.asmer;
 
+import com.kayz.asmer.internal.VirtualConcurrency;
+
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;

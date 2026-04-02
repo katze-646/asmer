@@ -1,4 +1,6 @@
-package com.kayz.asmer;
+package com.kayz.asmer.internal;
+
+import com.kayz.asmer.AsmerCache;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -15,12 +17,12 @@ import java.util.Optional;
  * <p>Use {@link AsmerCache#chain(AsmerCache, AsmerCache)} or
  * {@link AsmerCache#andThen(AsmerCache)} to construct instances.
  */
-final class ChainedCache implements AsmerCache {
+public final class ChainedCache implements AsmerCache {
 
     private final AsmerCache l1;
     private final AsmerCache l2;
 
-    ChainedCache(AsmerCache l1, AsmerCache l2) {
+    public ChainedCache(AsmerCache l1, AsmerCache l2) {
         this.l1 = l1;
         this.l2 = l2;
     }

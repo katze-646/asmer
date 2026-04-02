@@ -1,4 +1,8 @@
-package com.kayz.asmer;
+package com.kayz.asmer.internal;
+
+import com.kayz.asmer.AssemblyException;
+import com.kayz.asmer.Concurrency;
+import com.kayz.asmer.RuleDefinitionException;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -10,12 +14,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Package-private: runs rules via Java 21+ virtual threads.
+ * Runs rules via Java 21+ virtual threads.
  * Discovered via {@link MethodHandle} so the module stays compilable on Java 17.
  */
-final class VirtualConcurrency implements Concurrency {
+public final class VirtualConcurrency implements Concurrency {
 
-    static final VirtualConcurrency INSTANCE = new VirtualConcurrency();
+    public static final VirtualConcurrency INSTANCE = new VirtualConcurrency();
 
     private static final MethodHandle NEW_VT_EXECUTOR;
 
@@ -34,7 +38,7 @@ final class VirtualConcurrency implements Concurrency {
 
     private VirtualConcurrency() {}
 
-    static boolean isAvailable() {
+    public static boolean isAvailable() {
         return NEW_VT_EXECUTOR != null;
     }
 

@@ -1,5 +1,8 @@
 package com.kayz.asmer;
 
+import com.kayz.asmer.internal.ChainedCache;
+import com.kayz.asmer.internal.NoOpAsmerCache;
+
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
