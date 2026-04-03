@@ -2,6 +2,7 @@ package com.kayz.asmer.spring;
 
 import com.kayz.asmer.AsmerCache;
 import com.kayz.asmer.AsmerConfig;
+import com.kayz.asmer.AssemblyListener;
 import com.kayz.asmer.Concurrency;
 import com.kayz.asmer.ErrorPolicy;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -29,6 +30,22 @@ public class AsmerAutoConfiguration {
         // automatically picks up YAML settings without explicit injection.
         AsmerConfig.setGlobalDefault(config);
         return config;
+    }
+
+    // ---- metrics (Micrometer — optional) ----------------------------------------
+
+    @Configuration
+    @ConditionalOnClass(name = "io.micrometer.core.instrument.MeterRegistry")
+    static class MicrometerConfig {
+
+        @Bean
+        @ConditionalOnMissingBean(AssemblyListener.class)
+        @org.springframework.boot.autoconfigure.condition.ConditionalOnBean(io.micrometer.core.instrument.MeterRegistry.class)
+        public AssemblyListener assemblyListener(io.micrometer.core.instrument.MeterRegistry registry) {
+            MicrometerAssemblyListener listener = new MicrometerAssemblyListener(registry);
+            AssemblyListener.setGlobalDefault(listener);
+            return listener;
+        }
     }
 
     // ---- cache beans (Caffeine > no-op; Redis: auto-configured by asmer-cache-redis) ---

@@ -80,7 +80,7 @@ public final class Asmer<T> {
     private Concurrency      concurrency;
     private AsmerCache       cache;
     private ErrorPolicy      errorPolicy;
-    private AssemblyListener listener = AssemblyListener.noop();
+    private AssemblyListener listener = AssemblyListener.globalDefault();
 
     private Asmer(Class<T> entityType, List<T> data, AsmerConfig config) {
         this.entityType  = entityType;
