@@ -83,6 +83,22 @@
 |----|------|------|--------|
 | S4-1 | `feat/core/async-api` | `Asmer.assembleAsync()` 返回 `CompletableFuture<Void>` | P0 |
 | S4-2 | `test/core/async-api` | 正常路径、异常传播、多 future 并发安全 | P0 |
+| S4-3 | `docs/core/custom-cache-guide` | 自定义缓存 SPI 示例：Javadoc 补全 + Demo 端点 | P1 |
+
+### S4-3 详情 — 自定义缓存 SPI 示例
+
+**背景**：`AsmerCache` 接口已完整（`get / put / getAll / putAll / evict`），
+但缺少面向外部开发者的官方示例，导致"如何接入自定义缓存"不够显眼。
+
+**交付物**：
+
+| 交付 | 说明 |
+|------|------|
+| Javadoc 补全 | 在 `AsmerCache` 接口顶部用 `@implSpec` 标注实现契约（线程安全、null 语义、namespace 隔离） |
+| Demo 端点 | `GET /orders/custom-cache` — 用匿名内部类实现 `AsmerCache`（`ConcurrentHashMap` 存储），展示两次调用命中率的变化 |
+| 完成标准 | `mvn test` 全绿；Demo 响应中包含 `cacheHits` 字段变化 |
+
+---
 
 ### 设计约束
 
