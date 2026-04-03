@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.kayz</groupId>
+        <artifactId>asmer</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>asmer-bom</artifactId>
+    <packaging>pom</packaging>
+    <name>Asmer BOM</name>
+    <description>Bill of Materials for Asmer — import this to pin all module versions consistently</description>
+
+    <!--
+        Usage in downstream projects:
+
+        <dependencyManagement>
+          <dependencies>
+            <dependency>
+              <groupId>com.kayz</groupId>
+              <artifactId>asmer-bom</artifactId>
+              <version>1.0.0</version>
+              <type>pom</type>
+              <scope>import</scope>
+            </dependency>
+          </dependencies>
+        </dependencyManagement>
+
+        Then declare dependencies without version:
+        <dependency>
+          <groupId>com.kayz</groupId>
+          <artifactId>asmer-core</artifactId>
+        </dependency>
+    -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.kayz</groupId>
+                <artifactId>asmer-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.kayz</groupId>
+                <artifactId>asmer-spring-boot-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.kayz</groupId>
+                <artifactId>asmer-cache-caffeine</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.kayz</groupId>
+                <artifactId>asmer-cache-redis</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+</project>

@@ -18,6 +18,15 @@ package com.kayz.asmer;
 @FunctionalInterface
 public interface AssemblyListener {
 
+    /**
+     * Invoked once per rule after it completes, whether successfully or not.
+     *
+     * <p>Implementations must not throw exceptions — any unchecked exception thrown
+     * here is silently swallowed by the framework to prevent a buggy listener from
+     * aborting assembly.
+     *
+     * @param event metrics snapshot for the completed rule
+     */
     void onAssembly(AssemblyEvent event);
 
     /** No-op listener — default when none is configured. */
