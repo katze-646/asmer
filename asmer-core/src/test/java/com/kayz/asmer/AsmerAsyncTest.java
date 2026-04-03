@@ -9,8 +9,11 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Timeout;
@@ -167,6 +170,52 @@ class AsmerAsyncTest {
                 .join();
 
         assertEquals(1, callCount.get(), "listener must be called once per rule");
+    }
+
+    // ---- assembleAsync(Executor) -----------------------------------------
+
+    @Test
+    void assembleAsync_customExecutor_runsOnThatExecutor() {
+        AtomicReference<String> threadName = new AtomicReference<>();
+        Executor namedExecutor = r -> {
+            Thread t = new Thread(() -> {
+                threadName.set(Thread.currentThread().getName());
+                r.run();
+            }, "custom-exec");
+            t.start();
+        };
+
+        List<Order> data = orders(2);
+        Asmer.of(data)
+                .on(Order::getUser, this::userLoader, User::getId)
+                .assembleAsync(namedExecutor)
+                .join();
+
+        assertEquals("custom-exec", threadName.get(),
+                "assembly must run on the provided executor's thread");
+    }
+
+    @Test
+    void assembleAsync_customExecutor_exceptionPropagates() {
+        Executor directExecutor = Runnable::run; // runs on calling thread, still wraps in CF
+
+        List<Order> data = orders(1);
+        CompletableFuture<Void> f = Asmer.of(data)
+                .on(Order::getUser, ids -> { throw new RuntimeException("exec-boom"); }, User::getId)
+                .assembleAsync(directExecutor);
+
+        CompletionException ex = assertThrows(CompletionException.class, f::join);
+        assertTrue(ex.getCause().getMessage().contains("exec-boom"));
+    }
+
+    @Test
+    void assembleAsync_customExecutor_emptyData_returnsCompletedFuture() {
+        Executor executor = command -> { throw new AssertionError("must not submit to executor for empty data"); };
+        CompletableFuture<Void> f = Asmer.of(Order.class, new ArrayList<>())
+                .on(Order::getUser, this::userLoader, User::getId)
+                .assembleAsync(executor);
+        assertTrue(f.isDone());
+        assertDoesNotThrow(f::join);
     }
 
     @Test

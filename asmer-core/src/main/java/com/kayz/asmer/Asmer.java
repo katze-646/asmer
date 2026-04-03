@@ -17,6 +17,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -333,9 +335,42 @@ public final class Asmer<T> {
      * @return a future that completes normally when all rules succeed,
      *         or exceptionally if any rule throws and the policy is {@link ErrorPolicy#THROW}
      */
+    /**
+     * Executes all registered rules asynchronously using {@link ForkJoinPool#commonPool()}.
+     * Equivalent to {@code assembleAsync(ForkJoinPool.commonPool())}.
+     *
+     * @return a future that completes normally when all rules succeed,
+     *         or exceptionally (via {@link java.util.concurrent.CompletionException})
+     *         if any rule throws and the policy is {@link ErrorPolicy#THROW}
+     */
     public CompletableFuture<Void> assembleAsync() {
+        return assembleAsync(ForkJoinPool.commonPool());
+    }
+
+    /**
+     * Executes all registered rules asynchronously on the supplied {@link Executor}.
+     *
+     * <p>Use this overload when you need explicit control over the thread model, for example:
+     * <ul>
+     *   <li><b>Java 21+ virtual threads</b> (recommended for I/O-heavy loaders):
+     *       {@code Executors.newVirtualThreadPerTaskExecutor()}</li>
+     *   <li><b>Bounded pool with back-pressure</b>:
+     *       {@code new ThreadPoolExecutor(n, n, 0, SECONDS, new ArrayBlockingQueue<>(cap), new CallerRunsPolicy())}</li>
+     * </ul>
+     *
+     * <p><b>Avoid</b> {@code Executors.newFixedThreadPool} in high-throughput scenarios —
+     * its internal {@code LinkedBlockingQueue} is unbounded and can cause OOM under sustained load
+     * with no back-pressure signal.
+     *
+     * <p>The {@link Executor} is <em>not</em> shut down by the framework.
+     *
+     * @param executor executor that will run the assembly; must not be {@code null}
+     * @return a future completing when all rules finish
+     */
+    public CompletableFuture<Void> assembleAsync(Executor executor) {
+        Objects.requireNonNull(executor, "executor");
         if (data.isEmpty()) return CompletableFuture.completedFuture(null);
-        return CompletableFuture.runAsync(this::assemble);
+        return CompletableFuture.runAsync(this::assemble, executor);
     }
 
     // ---- private helpers ------------------------------------------------
