@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -310,6 +311,31 @@ public final class Asmer<T> {
                 .errorPolicy(errorPolicy)
                 .build();
         new AssemblyEngine(effective, listener).assemble(data, rules);
+    }
+
+    /**
+     * Executes all registered rules asynchronously, returning a
+     * {@link CompletableFuture} that completes when every rule has finished.
+     *
+     * <p>The assembly logic — including the configured {@link Concurrency} strategy,
+     * {@link ErrorPolicy}, and {@link AssemblyListener} — behaves identically to
+     * the synchronous {@link #assemble()}. Exceptions are propagated via
+     * {@link java.util.concurrent.CompletionException}.
+     *
+     * <pre>{@code
+     * CompletableFuture<Void> f = Asmer.of(orders)
+     *     .on(Order::getUser, userRepo::findByIdIn, User::getId)
+     *     .assembleAsync();
+     * // do other work ...
+     * f.join(); // or compose with other futures
+     * }</pre>
+     *
+     * @return a future that completes normally when all rules succeed,
+     *         or exceptionally if any rule throws and the policy is {@link ErrorPolicy#THROW}
+     */
+    public CompletableFuture<Void> assembleAsync() {
+        if (data.isEmpty()) return CompletableFuture.completedFuture(null);
+        return CompletableFuture.runAsync(this::assemble);
     }
 
     // ---- private helpers ------------------------------------------------
