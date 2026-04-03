@@ -77,9 +77,10 @@ public final class Asmer<T> {
     private final List<Rule<T, ?, ?>> rules = new ArrayList<>();
 
     // Per-instance config — initialized from AsmerConfig, overridable via fluent methods
-    private Concurrency concurrency;
-    private AsmerCache  cache;
-    private ErrorPolicy errorPolicy;
+    private Concurrency      concurrency;
+    private AsmerCache       cache;
+    private ErrorPolicy      errorPolicy;
+    private AssemblyListener listener = AssemblyListener.noop();
 
     private Asmer(Class<T> entityType, List<T> data, AsmerConfig config) {
         this.entityType  = entityType;
@@ -203,6 +204,12 @@ public final class Asmer<T> {
         return this;
     }
 
+    /** Attaches a listener that receives metrics after each rule completes. */
+    public Asmer<T> listener(AssemblyListener listener) {
+        this.listener = Objects.requireNonNull(listener, "listener");
+        return this;
+    }
+
     // ---- batch loader ---------------------------------------------------
 
     /**
@@ -302,7 +309,7 @@ public final class Asmer<T> {
                 .cache(cache)
                 .errorPolicy(errorPolicy)
                 .build();
-        new AssemblyEngine(effective).assemble(data, rules);
+        new AssemblyEngine(effective, listener).assemble(data, rules);
     }
 
     // ---- private helpers ------------------------------------------------

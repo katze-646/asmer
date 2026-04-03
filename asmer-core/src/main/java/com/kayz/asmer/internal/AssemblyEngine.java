@@ -2,12 +2,15 @@ package com.kayz.asmer.internal;
 
 import com.kayz.asmer.AsmerCache;
 import com.kayz.asmer.AsmerConfig;
+import com.kayz.asmer.AssemblyEvent;
 import com.kayz.asmer.AssemblyException;
+import com.kayz.asmer.AssemblyListener;
 import com.kayz.asmer.ErrorPolicy;
 import com.kayz.asmer.RuleDefinitionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -22,10 +25,12 @@ public final class AssemblyEngine {
 
     private static final Logger log = LoggerFactory.getLogger(AssemblyEngine.class);
 
-    private final AsmerConfig config;
+    private final AsmerConfig       config;
+    private final AssemblyListener  listener;
 
-    public AssemblyEngine(AsmerConfig config) {
-        this.config = config;
+    public AssemblyEngine(AsmerConfig config, AssemblyListener listener) {
+        this.config   = config;
+        this.listener = Objects.requireNonNull(listener);
     }
 
     /**
@@ -50,21 +55,35 @@ public final class AssemblyEngine {
     // ---- rule execution -------------------------------------------------
 
     private <T, K, V> void executeRuleSafe(Rule<T, K, V> rule, List<T> entities) {
+        long start = System.nanoTime();
+        int[] metrics = {0, 0}; // [0]=keyCount, [1]=cacheHits
+        boolean success = true;
         try {
-            doExecuteRule(rule, entities);
+            doExecuteRule(rule, entities, metrics);
         } catch (RuleDefinitionException e) {
             throw e; // programming error — always propagate
         } catch (AssemblyException e) {
+            success = false;
             handleError(rule, entities, e);
         } catch (Exception e) {
+            success = false;
             handleError(rule, entities,
                     new AssemblyException("Rule '" + rule.name() + "' failed unexpectedly: " + e.getMessage(), e));
+        } finally {
+            Duration duration = Duration.ofNanos(System.nanoTime() - start);
+            AssemblyEvent event = new AssemblyEvent(rule.name(), metrics[0], metrics[1], duration, success);
+            try {
+                listener.onAssembly(event);
+            } catch (Exception ignored) {
+                // listener exceptions must never abort assembly
+            }
         }
     }
 
-    private <T, K, V> void doExecuteRule(Rule<T, K, V> rule, List<T> entities) {
+    private <T, K, V> void doExecuteRule(Rule<T, K, V> rule, List<T> entities, int[] metrics) {
         // 1. Collect unique non-null keys
         List<K> allKeys = collectKeys(rule, entities);
+        metrics[0] = allKeys.size(); // keyCount
 
         if (allKeys.isEmpty()) {
             applyDefault(rule, entities);
@@ -74,6 +93,7 @@ public final class AssemblyEngine {
         // 2. Cache lookup
         AsmerCache cache = config.cache();
         Map<K, V> cached = cache.getAll(rule.name(), allKeys);
+        metrics[1] = cached.size(); // cacheHits
         List<K> missing = allKeys.stream().filter(k -> !cached.containsKey(k)).toList();
 
         // 3. Batch-load cache misses
