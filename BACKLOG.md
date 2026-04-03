@@ -23,7 +23,7 @@
 | S1 | 测试覆盖补齐 | ✅ 全部完成 |
 | S2 | Redis 模块 | ✅ 全部完成 |
 | S3 | 可观测性 SPI | ✅ 全部完成 |
-| S4 | 异步 API + 自定义缓存 SPI 文档 | 🚧 进行中 |
+| S4 | 异步 API + 自定义缓存 SPI 文档 | ✅ 全部完成 |
 | S5 | 发布准备 | 💡 规划中 |
 
 ---
@@ -69,7 +69,7 @@
 
 ---
 
-## 📋 Sprint 4 — 异步 API
+## ✅ Sprint 4 — 异步 API + 自定义缓存 SPI 文档
 
 **目标**：支持非阻塞调用，让 assembly 可以融入 reactive / virtual-thread 管道。
 
@@ -83,7 +83,7 @@
 |----|------|------|--------|--------|
 | S4-1 | `feat/core/async-api` | `Asmer.assembleAsync()` 返回 `CompletableFuture<Void>` | P0 | 02691a8 |
 | S4-2 | — | 测试随 S4-1 同步提交（8 tests in AsmerAsyncTest） | P0 | 02691a8 |
-| S4-3 | `docs/core/custom-cache-guide` | 自定义缓存 SPI 示例：Javadoc 补全 + Demo 端点 | P1 | 🚧 |
+| S4-3 | `docs/core/custom-cache-guide` | 自定义缓存 SPI 示例：Javadoc 补全 + Demo 端点 | P1 | 76f359b |
 
 ### S4-3 详情 — 自定义缓存 SPI 示例
 
