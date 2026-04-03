@@ -22,18 +22,42 @@ import java.util.Optional;
  *   <li>{@code RedisCache} in {@code asmer-cache-redis} module</li>
  * </ul>
  *
- * <p>Usage example — custom in-memory cache backed by a {@code ConcurrentHashMap}:
+ * <h3>实现契约（@implSpec）</h3>
+ * <ul>
+ *   <li><b>线程安全</b>：{@code get} / {@code put} / {@code getAll} / {@code putAll}
+ *       可能被多个线程同时调用（当配置了并发策略时）。实现必须保证线程安全。</li>
+ *   <li><b>Null 语义</b>：{@code get} 返回 {@link java.util.Optional#empty()} 表示未命中，
+ *       绝不返回包含 {@code null} 的 Optional；{@code put} 的 {@code value} 参数永远不为 {@code null}。</li>
+ *   <li><b>Namespace 隔离</b>：不同 {@code namespace}（即 rule 名称）之间的 key 相互独立，
+ *       实现必须将 namespace 纳入存储 key 的组成部分（如 {@code namespace + ":" + key}）。</li>
+ *   <li><b>无副作用异常</b>：{@code get} / {@code getAll} 出现异常时，框架会降级为直接调用 loader，
+ *       不会中止 assembly；{@code put} / {@code putAll} 的写入失败同样应当静默处理或记录日志，
+ *       不允许向上抛出异常。</li>
+ * </ul>
+ *
+ * <h3>最简自定义实现示例</h3>
  * <pre>{@code
+ * // 用 ConcurrentHashMap 实现一个简单的进程内缓存
  * AsmerCache myCache = new AsmerCache() {
  *     private final Map<String, Object> store = new ConcurrentHashMap<>();
  *
- *     public <K, V> Optional<V> get(String ns, K key) {
- *         return Optional.ofNullable((V) store.get(ns + ":" + key));
+ *     @Override
+ *     @SuppressWarnings("unchecked")
+ *     public <K, V> Optional<V> get(String namespace, K key) {
+ *         return Optional.ofNullable((V) store.get(namespace + ":" + key));
  *     }
- *     public <K, V> void put(String ns, K key, V value) {
- *         store.put(ns + ":" + key, value);
+ *
+ *     @Override
+ *     public <K, V> void put(String namespace, K key, V value) {
+ *         store.put(namespace + ":" + key, value);
  *     }
  * };
+ *
+ * // 在链式 API 中使用
+ * Asmer.of(orders)
+ *     .cache(myCache)
+ *     .on(Order::getUser, userRepo::findByIdIn, User::getId)
+ *     .assemble();
  * }</pre>
  */
 public interface AsmerCache {

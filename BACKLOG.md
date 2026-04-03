@@ -23,7 +23,7 @@
 | S1 | 测试覆盖补齐 | ✅ 全部完成 |
 | S2 | Redis 模块 | ✅ 全部完成 |
 | S3 | 可观测性 SPI | ✅ 全部完成 |
-| S4 | 异步 API | 📋 下一个 |
+| S4 | 异步 API + 自定义缓存 SPI 文档 | 🚧 进行中 |
 | S5 | 发布准备 | 💡 规划中 |
 
 ---
@@ -79,11 +79,11 @@
 
 ### 任务列表
 
-| ID | 分支 | 描述 | 优先级 |
-|----|------|------|--------|
-| S4-1 | `feat/core/async-api` | `Asmer.assembleAsync()` 返回 `CompletableFuture<Void>` | P0 |
-| S4-2 | `test/core/async-api` | 正常路径、异常传播、多 future 并发安全 | P0 |
-| S4-3 | `docs/core/custom-cache-guide` | 自定义缓存 SPI 示例：Javadoc 补全 + Demo 端点 | P1 |
+| ID | 分支 | 描述 | 优先级 | Commit |
+|----|------|------|--------|--------|
+| S4-1 | `feat/core/async-api` | `Asmer.assembleAsync()` 返回 `CompletableFuture<Void>` | P0 | 02691a8 |
+| S4-2 | — | 测试随 S4-1 同步提交（8 tests in AsmerAsyncTest） | P0 | 02691a8 |
+| S4-3 | `docs/core/custom-cache-guide` | 自定义缓存 SPI 示例：Javadoc 补全 + Demo 端点 | P1 | 🚧 |
 
 ### S4-3 详情 — 自定义缓存 SPI 示例
 
