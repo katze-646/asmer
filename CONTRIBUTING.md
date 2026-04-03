@@ -232,7 +232,7 @@ Sprint 4 [待开始]   — 异步 API
 | ID | 分支 | 任务 | 状态 |
 |----|------|------|------|
 | S2-1 | `test/redis/integration` | 审查 `RedisCache` 实现；本地 Redis 集成测试（18 tests） | DONE (629a2d5) |
-| S2-2 | `fix/redis/<topic>` | 修复审查中发现的问题 | TODO |
+| S2-2 | `fix/redis/evict-scan` | `evict()` 用 SCAN 替换 KEYS，避免生产阻塞 | DONE (08faa81) |
 
 **完成标准**：`RedisCache` 覆盖 get/put/getAll/putAll/evict；pipeline/批量操作正确。
 
