@@ -1,9 +1,13 @@
 package com.kayz.asmer.cache.redis;
 
 import com.kayz.asmer.AsmerCache;
+import org.springframework.data.redis.connection.RedisStringCommands;
 import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
+import org.springframework.data.redis.core.types.Expiration;
+import org.springframework.data.redis.serializer.RedisSerializer;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -84,10 +88,29 @@ public final class RedisCache implements AsmerCache {
         return result;
     }
 
+    /**
+     * Stores all entries using a single Redis pipeline flush.
+     *
+     * <p>Compared to issuing one {@code SET} per entry, pipeline batches all commands
+     * into a single network round-trip, reducing latency from O(N) to O(1) RTTs.
+     */
     @Override
+    @SuppressWarnings("unchecked")
     public <K, V> void putAll(String namespace, Map<K, V> entries) {
-        entries.forEach((key, value) ->
-                redisTemplate.opsForValue().set(buildKey(namespace, key), value, ttl));
+        if (entries.isEmpty()) return;
+        RedisSerializer<String> keySerializer   = (RedisSerializer<String>) redisTemplate.getKeySerializer();
+        RedisSerializer<Object> valueSerializer = (RedisSerializer<Object>) redisTemplate.getValueSerializer();
+        Expiration expiration = Expiration.from(ttl);
+
+        redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+            entries.forEach((k, v) -> {
+                byte[] redisKey   = keySerializer.serialize(buildKey(namespace, k));
+                byte[] redisValue = valueSerializer.serialize(v);
+                connection.stringCommands().set(redisKey, redisValue, expiration,
+                        RedisStringCommands.SetOption.upsert());
+            });
+            return null;
+        });
     }
 
     // ---- eviction -------------------------------------------------------
