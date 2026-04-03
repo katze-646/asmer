@@ -129,7 +129,11 @@ class AsmerJpaIntegrationTest {
         List<OrderEntity> orders = orderRepo.findByStatus("PENDING");
         assertEquals(2, orders.size());
 
+        // Disable cache: this test verifies batch deduplication, not caching.
+        // Without explicit cache(none), a warm global cache from a prior test would
+        // return cache hits and the loader would never be called.
         Asmer.of(orders)
+                .cache(AsmerCache.none())
                 .on(OrderEntity::getUser,
                         ids -> { queryCount.incrementAndGet(); return userRepo.findByIdIn(ids); },
                         UserEntity::getId)
