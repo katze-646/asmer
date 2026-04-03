@@ -1,9 +1,12 @@
 package com.kayz.asmer.cache.redis;
 
 import com.kayz.asmer.AsmerCache;
+import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -89,11 +92,31 @@ public final class RedisCache implements AsmerCache {
 
     // ---- eviction -------------------------------------------------------
 
+    /**
+     * Removes all entries under the given namespace.
+     *
+     * <p>Uses {@code SCAN} instead of {@code KEYS} to avoid blocking the Redis
+     * event loop on large keyspaces. {@code SCAN} is cursor-based and processes
+     * keys in small batches, so other commands continue to be served between
+     * each batch.
+     */
     @Override
     public void evict(String namespace) {
-        var keys = redisTemplate.keys(KEY_PREFIX + namespace + ":*");
-        if (keys != null && !keys.isEmpty()) {
-            redisTemplate.delete(keys);
+        ScanOptions options = ScanOptions.scanOptions()
+                .match(KEY_PREFIX + namespace + ":*")
+                .count(100)
+                .build();
+
+        List<String> toDelete = new ArrayList<>();
+        redisTemplate.execute((org.springframework.data.redis.core.RedisCallback<Void>) connection -> {
+            try (Cursor<byte[]> cursor = connection.keyCommands().scan(options)) {
+                cursor.forEachRemaining(key -> toDelete.add(new String(key)));
+            }
+            return null;
+        });
+
+        if (!toDelete.isEmpty()) {
+            redisTemplate.delete(toDelete);
         }
     }
 
