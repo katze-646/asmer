@@ -25,7 +25,7 @@
 | S3 | 可观测性 SPI | ✅ 全部完成 |
 | S4 | 异步 API + 自定义缓存 SPI 文档 | ✅ 全部完成 |
 | S5 | 发布准备 | ✅ 全部完成（S5-2 待手动触发） |
-| S6 | 性能 + 异步增强 + 稳定性 | 📋 下一个 |
+| S6 | 性能 + 异步增强 + 稳定性 | ✅ 全部完成 |
 
 ---
 
@@ -139,17 +139,17 @@ f.join(); // 或与其他 future 组合
 
 ---
 
-## 📋 Sprint 6 — 性能 + 异步增强 + 稳定性
+## ✅ Sprint 6 — 性能 + 异步增强 + 稳定性
 
 **目标**：降低生产延迟，修复异步 API 对 ForkJoinPool 的隐式耦合，防止下游雪崩。
 
 ### 任务列表
 
-| ID | 分支 | 描述 | 优先级 |
-|----|------|------|--------|
-| S6-1 | `perf/redis/pipeline` | Redis `putAll` 改 pipeline，N 次 RTT → 1 次 | P0 |
-| S6-2 | `feat/core/async-executor` | `assembleAsync(Executor)` 重载，解耦 ForkJoinPool 依赖 | P0 |
-| S6-3 | `feat/core/rate-limit` | Loader 限流 SPI：`RateLimit.perRule(n)` Semaphore 实现 | P1 |
+| ID | 分支 | 描述 | 优先级 | Commit |
+|----|------|------|--------|--------|
+| S6-1 | `perf/redis/pipeline` | Redis `putAll` 改 pipeline，N 次 RTT → 1 次 | P0 | 51425c8 |
+| S6-2 | `feat/core/async-executor` | `assembleAsync(Executor)` 重载，解耦 ForkJoinPool 依赖 | P0 | 47f9ca2 |
+| S6-3 | `feat/core/rate-limit` | Loader 限流 SPI：`RateLimit.perRule(n)` Semaphore 实现 | P1 | 267bd45 |
 
 ### S6-1 详情 — Redis pipeline
 
