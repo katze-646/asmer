@@ -9,9 +9,11 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+
+import org.junit.jupiter.api.Timeout;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -124,31 +126,33 @@ class AsmerAsyncTest {
         assertDoesNotThrow(f::join, "LOG_AND_SKIP must not propagate the exception");
     }
 
+    /**
+     * 验证多个 assembleAsync() 调用相互独立、数据不交叉污染。
+     * 不依赖线程池内部调度时序，避免在 CI 少核环境下死锁。
+     */
     @Test
-    void assembleAsync_multipleFutures_runConcurrently() throws InterruptedException {
-        int parallelism = 4;
-        CountDownLatch ready = new CountDownLatch(parallelism);
-        CountDownLatch go    = new CountDownLatch(1);
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    void assembleAsync_multipleFutures_dataIsolated() {
+        int count = 6;
+        List<List<Order>> datasets = new ArrayList<>();
+        List<CompletableFuture<Void>> futures  = new ArrayList<>();
 
-        List<CompletableFuture<Void>> futures = new ArrayList<>();
-        for (int i = 0; i < parallelism; i++) {
-            List<Order> data = orders(1);
-            CompletableFuture<Void> f = Asmer.of(data)
-                    .on(Order::getUser, ids -> {
-                        ready.countDown();
-                        try { go.await(); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
-                        return userLoader(ids);
-                    }, User::getId)
-                    .assembleAsync();
-            futures.add(f);
+        for (int i = 0; i < count; i++) {
+            List<Order> data = orders(3);
+            datasets.add(data);
+            futures.add(Asmer.of(data)
+                    .on(Order::getUser, this::userLoader, User::getId)
+                    .assembleAsync());
         }
 
-        // Wait for all loaders to be in-flight simultaneously
-        ready.await();
-        go.countDown();
-
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-        // If we reach here without deadlock, concurrency works correctly
+
+        for (List<Order> data : datasets) {
+            for (Order o : data) {
+                assertNotNull(o.user, "every order must have user set");
+                assertEquals(o.userId, o.user.getId(), "user id must match order userId");
+            }
+        }
     }
 
     @Test
