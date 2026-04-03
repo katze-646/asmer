@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -184,6 +185,29 @@ class RedisCacheTest {
             assertEquals(2, result.size());
             assertEquals("Alice", result.get("1"));
             assertEquals("Bob",   result.get("2"));
+        }
+
+        @Test
+        void putAll_allEntriesHaveTtl() {
+            // Pipeline implementation must preserve TTL on every entry
+            Duration ttl = Duration.ofMinutes(10);
+            RedisCache cache = RedisCache.of(template, ttl);
+            Map<String, String> entries = Map.of("a", "v1", "b", "v2", "c", "v3",
+                                                  "d", "v4", "e", "v5");
+            cache.putAll("ns", entries);
+
+            entries.keySet().forEach(k -> {
+                Long expire = template.getExpire("asmer:ns:" + k, TimeUnit.SECONDS);
+                assertNotNull(expire, "TTL entry missing for key " + k);
+                assertTrue(expire > 0, "TTL must be positive for key " + k + ", got " + expire);
+            });
+        }
+
+        @Test
+        void putAll_emptyMap_isNoOp() {
+            RedisCache cache = RedisCache.of(template, Duration.ofMinutes(5));
+            assertDoesNotThrow(() -> cache.putAll("ns", Map.of()));
+            assertTrue(cache.getAll("ns", List.of("x")).isEmpty());
         }
     }
 
