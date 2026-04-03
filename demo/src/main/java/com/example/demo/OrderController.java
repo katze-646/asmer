@@ -45,6 +45,9 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * ── Observability (Sprint 3) ──────────────────────────────────────────────
  * GET /orders/listener     — AssemblyListener: returns per-rule metrics as JSON
+ *
+ * ── Custom Cache SPI (Sprint 4) ───────────────────────────────────────────
+ * GET /orders/custom-cache — AsmerCache 自定义实现示例（ConcurrentHashMap），展示 cacheHits 变化
  */
 @RestController
 @RequestMapping("/orders")
@@ -57,6 +60,12 @@ public class OrderController {
     private final AsmerCache l1Cache = mapCache("L1");
     private final AsmerCache l2Cache = mapCache("L2");
     private final AsmerCache chainedCache = l1Cache.andThen(l2Cache);
+
+    /**
+     * 自定义缓存：用 ConcurrentHashMap 实现 AsmerCache 接口。
+     * 跨请求共享，第 2 次调用可观察到 cacheHits > 0。
+     */
+    private final AsmerCache customCache = mapCache("custom");
 
     public OrderController(OrderRepository orderRepo,
                            OrderItemRepository itemRepo,
@@ -245,6 +254,34 @@ public class OrderController {
         Asmer.of(orders)
                 .cache(chainedCache)                  // warm cache → hits visible on 2nd call
                 .listener(events::add)                // collect one event per rule
+                .on(Order::getUser,  userRepo::findByIdIn,      User::getId)
+                .on(Order::getItems, itemRepo::findByOrderIdIn, OrderItem::getOrderId)
+                .assemble();
+
+        return events;
+    }
+
+    // ---- 12. Custom AsmerCache implementation (Sprint 4) ----------------
+
+    /**
+     * 展示如何用匿名内部类实现 {@link AsmerCache}，无需引入任何缓存依赖。
+     *
+     * <ul>
+     *   <li>第 1 次调用：{@code cacheHits=0}，数据从 DB 加载后写入自定义缓存。</li>
+     *   <li>第 2 次调用：{@code cacheHits>0}，命中自定义缓存，不再查 DB。</li>
+     * </ul>
+     *
+     * <p>响应体为 {@link AssemblyEvent} 列表，包含 {@code ruleName}、{@code keyCount}、
+     * {@code cacheHits}、{@code duration}、{@code success} 字段，便于直接观察缓存效果。
+     */
+    @GetMapping("/custom-cache")
+    public List<AssemblyEvent> withCustomCache() {
+        List<Order> orders = orderRepo.findAll();
+        List<AssemblyEvent> events = new java.util.ArrayList<>();
+
+        Asmer.of(orders)
+                .cache(customCache)
+                .listener(events::add)
                 .on(Order::getUser,  userRepo::findByIdIn,      User::getId)
                 .on(Order::getItems, itemRepo::findByOrderIdIn, OrderItem::getOrderId)
                 .assemble();
