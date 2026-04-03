@@ -24,7 +24,7 @@
 | S2 | Redis 模块 | ✅ 全部完成 |
 | S3 | 可观测性 SPI | ✅ 全部完成 |
 | S4 | 异步 API + 自定义缓存 SPI 文档 | ✅ 全部完成 |
-| S5 | 发布准备 | 💡 规划中 |
+| S5 | 发布准备 | ✅ 全部完成（S5-2 待手动触发） |
 
 ---
 
@@ -121,17 +121,20 @@ f.join(); // 或与其他 future 组合
 
 ---
 
-## 💡 Sprint 5 — 发布准备（规划中）
+## ✅ Sprint 5 — 发布准备
 
 **目标**：让 Asmer 可以作为正式库发布，供外部项目使用。
 
-| ID | 描述 | 优先级 |
-|----|------|--------|
-| S5-1 | 语义版本化：`1.0.0-SNAPSHOT` → `1.0.0` | P0 |
-| S5-2 | 发布到 Maven Central（`sonatype` staging） | P0 |
-| S5-3 | Javadoc 完整覆盖公共 API | P1 |
-| S5-4 | BOM 模块：`asmer-bom`，统一版本管理 | P1 |
-| S5-5 | GitHub Actions CI：`push` 触发 `mvn test` | P2 |
+| ID | 描述 | 优先级 | Commit |
+|----|------|--------|--------|
+| S5-1 | 语义版本化：`1.0-SNAPSHOT` → `1.0.0-SNAPSHOT` | P0 | 20ecac0 |
+| S5-2 | Maven Central 配置：license/scm/developers/release profile + central-publishing-plugin | P0 | 20ecac0 |
+| S5-3 | Javadoc 覆盖公共 API（AsmerConfig accessors、AssemblyListener.onAssembly） | P1 | 180a1e6 |
+| S5-4 | BOM 模块：`asmer-bom`，统一版本管理，支持 import scope | P1 | 20ecac0 |
+| S5-5 | GitHub Actions CI：push/PR 触发 Java 17 + 21 双版本测试 + Redis service | P2 | 20ecac0 |
+
+> **S5-2 说明**：配置已完成，实际发布需在本机执行 `mvn deploy -P release`，
+> 前置条件：Sonatype Central 账户 token（`~/.m2/settings.xml`）+ GPG 密钥。
 
 ---
 
