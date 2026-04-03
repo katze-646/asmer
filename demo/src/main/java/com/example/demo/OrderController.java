@@ -8,6 +8,8 @@ import com.example.demo.repository.OrderRepository;
 import com.example.demo.repository.UserRepository;
 import com.kayz.asmer.Asmer;
 import com.kayz.asmer.AsmerCache;
+import com.kayz.asmer.AssemblyEvent;
+import com.kayz.asmer.AssemblyListener;
 import com.kayz.asmer.Concurrency;
 import com.kayz.asmer.ErrorPolicy;
 import com.kayz.asmer.Fetchers;
@@ -23,16 +25,26 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Demonstrates Asmer usage patterns.
  *
- * GET /orders              — bare Asmer.of(data), uses YAML defaults automatically
- * GET /orders/{id}         — single entity
- * GET /orders/status/{s}   — AsmerJpa.byId() helper
- * GET /orders/inline       — fully inline fluent config (no injection needed)
- * GET /orders/override     — YAML defaults as base, override one setting per-call
- * GET /orders/timeout      — concurrency with timeout
- * GET /orders/onEach       — N+1 fallback
- * GET /orders/parallel     — Fetchers.parallel() for concurrent single-key fetch
- * GET /orders/fromMap      — Fetchers.fromMap() for map-returning RPC/HTTP
- * GET /orders/chained      — L1+L2 chained cache
+ * ── Core ──────────────────────────────────────────────────────────────────
+ * GET /orders              — Asmer.of(data), picks up YAML defaults automatically
+ * GET /orders/{id}         — single-entity convenience factory Asmer.of(entity)
+ * GET /orders/status/{s}   — AsmerJpa.byId() Spring Data helper
+ *
+ * ── Config ────────────────────────────────────────────────────────────────
+ * GET /orders/inline       — fully inline fluent: .cache().concurrency().errorPolicy()
+ * GET /orders/override     — YAML defaults as base, override one field per-call
+ * GET /orders/timeout      — Concurrency.platformThreads().withTimeout(Duration)
+ * GET /orders/onEach       — N+1 fallback via onEach (per-entity single fetch)
+ *
+ * ── Fetchers ──────────────────────────────────────────────────────────────
+ * GET /orders/parallel     — Fetchers.parallel(): concurrent single-key → batch
+ * GET /orders/fromMap      — Fetchers.fromMap(): Map-returning RPC/HTTP adapter
+ *
+ * ── Cache ─────────────────────────────────────────────────────────────────
+ * GET /orders/chained      — AsmerCache.chain(l1, l2): two-level cache
+ *
+ * ── Observability (Sprint 3) ──────────────────────────────────────────────
+ * GET /orders/listener     — AssemblyListener: returns per-rule metrics as JSON
  */
 @RestController
 @RequestMapping("/orders")
@@ -211,6 +223,33 @@ public class OrderController {
                 .on(Order::getItems, itemRepo::findByOrderIdIn, OrderItem::getOrderId)
                 .assemble();
         return orders;
+    }
+
+    // ---- 11. AssemblyListener — per-rule metrics (Sprint 3) -------------
+
+    /**
+     * Attaches an inline listener that collects {@link AssemblyEvent} per rule.
+     * The response body IS the metrics — ruleName, keyCount, cacheHits, duration, success.
+     *
+     * <p>Call this endpoint twice in quick succession to see cacheHits > 0 on the second call
+     * (the chained L1+L2 cache warms up after the first request).
+     *
+     * <p>In production, replace the inline listener with the auto-configured
+     * {@code MicrometerAssemblyListener} (added automatically when Micrometer is on the classpath).
+     */
+    @GetMapping("/listener")
+    public List<AssemblyEvent> withListener() {
+        List<Order> orders = orderRepo.findAll();
+        List<AssemblyEvent> events = new java.util.ArrayList<>();
+
+        Asmer.of(orders)
+                .cache(chainedCache)                  // warm cache → hits visible on 2nd call
+                .listener(events::add)                // collect one event per rule
+                .on(Order::getUser,  userRepo::findByIdIn,      User::getId)
+                .on(Order::getItems, itemRepo::findByOrderIdIn, OrderItem::getOrderId)
+                .assemble();
+
+        return events;
     }
 
     // ---- helper ---------------------------------------------------------
