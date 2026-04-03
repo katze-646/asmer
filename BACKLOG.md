@@ -25,6 +25,7 @@
 | S3 | 可观测性 SPI | ✅ 全部完成 |
 | S4 | 异步 API + 自定义缓存 SPI 文档 | ✅ 全部完成 |
 | S5 | 发布准备 | ✅ 全部完成（S5-2 待手动触发） |
+| S6 | 性能 + 异步增强 + 稳定性 | 📋 下一个 |
 
 ---
 
@@ -135,6 +136,94 @@ f.join(); // 或与其他 future 组合
 
 > **S5-2 说明**：配置已完成，实际发布需在本机执行 `mvn deploy -P release`，
 > 前置条件：Sonatype Central 账户 token（`~/.m2/settings.xml`）+ GPG 密钥。
+
+---
+
+## 📋 Sprint 6 — 性能 + 异步增强 + 稳定性
+
+**目标**：降低生产延迟，修复异步 API 对 ForkJoinPool 的隐式耦合，防止下游雪崩。
+
+### 任务列表
+
+| ID | 分支 | 描述 | 优先级 |
+|----|------|------|--------|
+| S6-1 | `perf/redis/pipeline` | Redis `putAll` 改 pipeline，N 次 RTT → 1 次 | P0 |
+| S6-2 | `feat/core/async-executor` | `assembleAsync(Executor)` 重载，解耦 ForkJoinPool 依赖 | P0 |
+| S6-3 | `feat/core/rate-limit` | Loader 限流 SPI：`RateLimit.perRule(n)` Semaphore 实现 | P1 |
+
+### S6-1 详情 — Redis pipeline
+
+**背景**：当前 `putAll()` 对每个 key-value 对单独调用 `SET`，N 条 rule × M 个 key = N×M 次网络往返。
+Redis pipeline 将命令批量发送，一次 flush，RTT 从 N×M 降至 1。
+
+**设计**：
+```java
+// 当前（N 次 SET）
+entries.forEach((k, v) -> ops.set(buildKey(ns, k), serialize(v), ttl));
+
+// 目标（1 次 pipeline flush）
+redisTemplate.executePipelined((RedisCallback<Object>) conn -> {
+    entries.forEach((k, v) -> conn.stringCommands().set(...));
+    return null;
+});
+```
+
+**完成标准**：`RedisCacheTest` 全绿；新增 `putAll_usesPipeline` 验证命令批量发出。
+
+---
+
+### S6-2 详情 — assembleAsync(Executor)
+
+**背景**：当前 `assembleAsync()` 固定使用 `ForkJoinPool.commonPool()`。
+高并发 I/O 场景下（WebFlux、Loom）调用方希望自行控制线程模型，
+或使用 `Executors.newVirtualThreadPerTaskExecutor()`（Java 21）。
+
+> ⚠️ **关于 `Executors.newFixedThreadPool` 的警告**
+>
+> `newFixedThreadPool(n)` 内部使用 `LinkedBlockingQueue`（无界，容量 `Integer.MAX_VALUE`）。
+> 在高吞吐场景下，如果任务提交速度超过消费速度，队列无限增长最终导致 OOM，且无背压信号。
+>
+> **推荐替代方案**：
+> - Java 21+：`Executors.newVirtualThreadPerTaskExecutor()`（一任务一虚拟线程，无队列积压）
+> - 有界池：手动构造 `ThreadPoolExecutor(n, n, 0, SECONDS, new ArrayBlockingQueue<>(cap), new CallerRunsPolicy())`
+> - 保持默认：`assembleAsync()` 使用 `ForkJoinPool.commonPool()`，适合大多数场景
+
+**设计**：
+```java
+// 新重载
+public CompletableFuture<Void> assembleAsync(Executor executor) {
+    if (data.isEmpty()) return CompletableFuture.completedFuture(null);
+    return CompletableFuture.runAsync(this::assemble, executor);
+}
+
+// 原方法不变，仍用 commonPool
+public CompletableFuture<Void> assembleAsync() {
+    return assembleAsync(ForkJoinPool.commonPool());
+}
+```
+
+**完成标准**：
+- 新重载通过虚拟线程执行器测试
+- Javadoc 明确标注 `newFixedThreadPool` 无界队列风险
+
+---
+
+### S6-3 详情 — Loader 限流 SPI
+
+**背景**：下游服务抖动时，所有并发 assembly 同时重试，可能将下游打垮（惊群效应）。
+用 `Semaphore` 限制同一 rule 同时调用 loader 的并发数，起到熔断前的第一道防线。
+
+**设计**：
+```java
+// 使用方式
+Asmer.of(orders)
+    .on(Order::getUser,
+        RateLimit.perRule(userRepo::findByIdIn, 10), // 最多 10 个并发调用
+        User::getId)
+    .assemble();
+```
+
+**完成标准**：超出并发限制时抛 `AssemblyException`，`ErrorPolicy` 正常生效。
 
 ---
 
