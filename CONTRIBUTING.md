@@ -244,8 +244,8 @@ Sprint 4 [待开始]   — 异步 API
 
 | ID | 分支 | 任务 | 状态 |
 |----|------|------|------|
-| S3-1 | `feat/core/metrics-spi` | `AssemblyListener` SPI：rule 执行耗时、批量大小、缓存命中率 | TODO |
-| S3-2 | `feat/spring/metrics-actuator` | Spring Boot Actuator 集成，暴露 Micrometer 指标 | TODO |
+| S3-1 | `feat/core/metrics-spi` | AssemblyEvent + AssemblyListener SPI（11 tests） | DONE (5520219) |
+| S3-2 | `feat/spring/metrics-actuator` | MicrometerAssemblyListener + ConditionalOnBean（5 tests） | DONE (48012b8) |
 
 **完成标准**：SPI 有单元测试；Actuator 集成有 Spring Boot Test 验证。
 
