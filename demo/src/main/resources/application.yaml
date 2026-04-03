@@ -8,7 +8,10 @@ spring:
     database-platform: org.hibernate.community.dialect.SQLiteDialect
     hibernate:
       ddl-auto: create-drop
-    show-sql: true
+    show-sql: false
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false   # Duration → "PT0.123S" format
 
 # Asmer configuration
 asmer:
