@@ -33,6 +33,12 @@
             <artifactId>spring-data-commons</artifactId>
             <optional>true</optional>
         </dependency>
+        <!-- Micrometer metrics (optional: only needed when using MicrometerAssemblyListener) -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+            <optional>true</optional>
+        </dependency>
 
         <!-- test -->
         <dependency>

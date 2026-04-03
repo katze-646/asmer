@@ -20,8 +20,23 @@ public interface AssemblyListener {
 
     void onAssembly(AssemblyEvent event);
 
-    /** No-op listener used when none is configured. */
+    /** No-op listener — default when none is configured. */
     static AssemblyListener noop() {
         return event -> {};
+    }
+
+    // ---- global default (set by Spring auto-configuration) --------------
+
+    java.util.concurrent.atomic.AtomicReference<AssemblyListener> GLOBAL =
+            new java.util.concurrent.atomic.AtomicReference<>(noop());
+
+    /** Returns the process-wide default listener (noop until overridden). */
+    static AssemblyListener globalDefault() {
+        return GLOBAL.get();
+    }
+
+    /** Replaces the global default. Called by Spring auto-configuration at startup. */
+    static void setGlobalDefault(AssemblyListener listener) {
+        GLOBAL.set(java.util.Objects.requireNonNull(listener, "listener"));
     }
 }
