@@ -59,10 +59,16 @@ public final class AsmerConfig {
         this.errorPolicy = errorPolicy;
     }
 
+    /** Returns the concurrency strategy configured for this instance. */
     public Concurrency concurrency() { return concurrency; }
+
+    /** Returns the cache configured for this instance. */
     public AsmerCache cache()        { return cache; }
+
+    /** Returns the error policy configured for this instance. */
     public ErrorPolicy errorPolicy() { return errorPolicy; }
 
+    /** Returns a new builder pre-populated with the defaults. */
     public static Builder builder() {
         return new Builder();
     }
